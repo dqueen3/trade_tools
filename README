@@ -1,0 +1,13 @@
+crontab -e
+
+# 平日 09:00〜09:30 を 3分おき
+0-30/3 9 * * 1-5  /Users/kawafmm/workspace/trade_tool/capture.sh >> /Users/kawafmm/workspace/trade_tool/capture.log 2>&1
+
+# 平日 10:00〜14:59 を 3分おき
+*/3 10-14 * * 1-6 /Users/kawafmm/workspace/trade_tool/capture.sh >> /Users/kawafmm/workspace/trade_tool/capture.log 2>&1
+
+# 平日 15:00〜15:30 を 3分おき
+0-30/3 15 * * 1-5 /Users/kawafmm/workspace/trade_tool/capture.sh >> /Users/kawafmm/workspace/trade_tool/capture.log 2>&1
+
+# 平日 16:00 に画像削除
+0 16 * * 1-5 find /Users/kawafmm/workspace/trade_tool/stocks -type f -name '*.png' -delete >> /Users/kawafmm/workspace/trade_tool/capture.log 2>&1
