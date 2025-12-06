@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>📈 Hyper SBI Market Monitor</title>
+<style>
+    body{background:#0d0d0d;color:#e6e6e6;font-family:monospace;text-align:center}
+    h1{margin-top:25px;}
+    img{width:92%;margin:12px 0;border:2px solid #222;border-radius:4px;}
+</style>
+</head>
+<body>
+<h1>📊 Live Capture — HyperSBI</h1>
+<script>
+(async()=>{
+    const repo="dqueen3/trade_tools";
+    const path="stocks";
+
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
+    const files = await res.json();
+
+    const sorted = files
+      .filter(f=>f.name.endsWith(".png"))
+      .sort((a,b)=>b.name.localeCompare(a.name));
+
+    document.body.innerHTML += sorted.map(f=>`<img src="${f.download_url}">`).join("");
+})();
+</script>
+</body>
+</html>

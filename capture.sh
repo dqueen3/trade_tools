@@ -9,3 +9,7 @@ echo "📌 WINDOW_ID=$WINDOW_ID"
 
 # ウィンドウIDを渡してキャプチャ実行
 $PYTHON /Users/kawafmm/workspace/trade_tool/capture.py "$WINDOW_ID"
+
+git add stocks/*.png
+git commit -m "auto: capture $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+git push origin main
