@@ -2,30 +2,29 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>📈 Hyper SBI Market Stream</title>
-<meta http-equiv="refresh" content="60"> <!-- ←自動更新 -->
+<title>📈 HyperSBI — Live Market Stream</title>
+<meta http-equiv="refresh" content="60"> <!-- 🔥 毎60秒自動更新 -->
 <style>
-    body{background:#0d0d0d;color:#e6e6e6;font-family:monospace;text-align:center}
-    img{width:95%;margin:12px;border:2px solid #333;border-radius:4px;}
+    body { background:#0A0A0A; color:#EAEAEA; font-family:monospace; text-align:center; }
+    .img-new { width:95%; border:3px solid #00B4FF; margin:14px auto; box-shadow:0 0 20px #00B4FF66; }
+    .img-old { width:75%; opacity:.4; margin:10px auto; filter:grayscale(30%); }
 </style>
 </head>
 <body>
-<h1>📊 Live Capture — 最新画像が最上段</h1>
+<h1>📊 Market Stream — Latest First</h1>
 
 <script>
 (async()=>{
-    const repo="dqueen3/trade_tools";
-    const path="stocks";
-    const res=await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
-    const files=await res.json();
+    const repo = "dqueen3/trade_tools";
+    const path = "stocks";
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
+    const files = await res.json();
+    const sorted = files.filter(f => f.name.endsWith(".png"))
+                        .sort((a,b)=>b.name.localeCompare(a.name));
 
-    // 🔥 新しい順にソート → 最新が一番上
-    const sorted=files.filter(f=>f.name.endsWith(".png"))
-                      .sort((a,b)=>b.name.localeCompare(a.name));
-
-    document.body.innerHTML += sorted
-        .slice(0,20)                     // ← 表示する最大枚数（今は20まで）
-        .map(f=>`<img src="${f.download_url}">`).join("");
+    document.body.innerHTML += 
+        `<img class="img-new" src="${sorted[0].download_url}">` + 
+        sorted.slice(1,10).map(f=>`<img class="img-old" src="${f.download_url}">`).join("");
 })();
 </script>
 </body>
