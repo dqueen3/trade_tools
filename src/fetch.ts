@@ -1,12 +1,22 @@
-import { execSync } from "child_process";
 import Parser from "rss-parser";
 import cron from "node-cron";
 import crypto from "crypto";
+import axios from "axios";
 import { evaluateText } from "./filter";
 import { appendRecord, readAllRecords, StoredRecord } from "./storage";
 import { generateReport } from "./report";
 
-const RSS_URLS = ["https://prtimes.jp/main/html/rd/p/rss.xml"];
+const RSS_URLS = [
+  "https://prtimes.jp/rss/pressrelease",
+  "https://prtimes.jp/main/html/rd/p/rss.xml",
+];
+
+const FEED_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+  Accept: "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+  "Accept-Language": "ja,en-US;q=0.8,en;q=0.6",
+};
 
 const parser = new Parser({
   xml2js: {
@@ -26,6 +36,32 @@ const sanitizeXml = (xml: string): string => {
   );
 };
 
+const fetchXml = async (url: string): Promise<string> => {
+  const response = await axios.get<string>(url, {
+    headers: FEED_HEADERS,
+    responseType: "text",
+    timeout: 15000,
+    maxRedirects: 5,
+    transformResponse: [(data) => data],
+  });
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Unexpected status ${response.status} for ${url}`);
+  }
+  return response.data ?? "";
+};
+
+const ensureXmlLooksLikeFeed = (xml: string, url: string): void => {
+  const trimmed = xml.trimStart().slice(0, 200).toLowerCase();
+  if (
+    !trimmed.startsWith("<rss") &&
+    !trimmed.startsWith("<?xml") &&
+    !trimmed.startsWith("<feed") &&
+    !trimmed.startsWith("<rdf")
+  ) {
+    throw new Error(`Feed response for ${url} was not XML/RSS.`);
+  }
+};
+
 const createId = (title: string, link: string): string => {
   return crypto
     .createHash("sha256")
@@ -34,10 +70,8 @@ const createId = (title: string, link: string): string => {
 };
 
 const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
-  const xml = execSync(
-    `curl -L -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" "${url}"`,
-    { encoding: "utf-8" }
-  );
+  const xml = await fetchXml(url);
+  ensureXmlLooksLikeFeed(xml, url);
   const sanitizedXml = sanitizeXml(xml);
   const feed = await parser.parseString(sanitizedXml);
 
