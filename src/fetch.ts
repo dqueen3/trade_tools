@@ -6,10 +6,7 @@ import { evaluateText } from "./filter";
 import { appendRecord, readAllRecords, StoredRecord } from "./storage";
 import { generateReport } from "./report";
 
-const RSS_URLS = [
-  "https://prtimes.jp/rss/pressrelease",
-  "https://prtimes.jp/main/html/rd/p/rss.xml",
-];
+const RSS_URLS = ["https://prtimes.jp/main/html/rd/p/pressrelease.xml"];
 
 const FEED_HEADERS = {
   "User-Agent":
