@@ -74,6 +74,8 @@ const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
 const runFetch = async (): Promise<void> => {
   const appended: StoredRecord[] = [];
   const failures: string[] = [];
+  const existingRecords = await readAllRecords();
+  const existingIds = new Set(existingRecords.map((record) => record.id));
   for (const url of RSS_URLS) {
     try {
       const items = await fetchFeed(url);
@@ -82,7 +84,11 @@ const runFetch = async (): Promise<void> => {
           continue;
         }
         const { matched, ...record } = item;
+        if (existingIds.has(record.id)) {
+          continue;
+        }
         await appendRecord(record);
+        existingIds.add(record.id);
         appended.push(record);
       }
     } catch (error) {
@@ -91,8 +97,7 @@ const runFetch = async (): Promise<void> => {
     }
   }
 
-  const existing = await readAllRecords();
-  await generateReport(existing);
+  await generateReport([...existingRecords, ...appended]);
 
   if (appended.length > 0) {
     console.log(`Appended ${appended.length} records.`);
