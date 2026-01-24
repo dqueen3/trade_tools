@@ -3,6 +3,7 @@ import cron from "node-cron";
 import crypto from "crypto";
 import { execSync } from "child_process";
 import { evaluateText } from "./filter";
+import { passesGptFilter } from "./gptFilter";
 import { appendRecord, readAllRecords, StoredRecord } from "./storage";
 import { generateReport } from "./report";
 
@@ -85,6 +86,10 @@ const runFetch = async (): Promise<void> => {
         }
         const { matched, ...record } = item;
         if (existingIds.has(record.id)) {
+          continue;
+        }
+        const gptApproved = await passesGptFilter(record.title, record.summary);
+        if (!gptApproved) {
           continue;
         }
         await appendRecord(record);
