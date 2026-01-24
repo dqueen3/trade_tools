@@ -12,6 +12,13 @@ const parser = new Parser();
 
 type FetchedRecord = StoredRecord & { matched: boolean };
 
+const sanitizeXml = (xml: string): string => {
+  return xml.replace(
+    /&(?![a-zA-Z]+;|#[0-9]+;|#x[a-fA-F0-9]+;)/g,
+    "&amp;"
+  );
+};
+
 const createId = (title: string, link: string): string => {
   return crypto
     .createHash("sha256")
@@ -24,7 +31,8 @@ const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
     `curl -L -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" "${url}"`,
     { encoding: "utf-8" }
   );
-  const feed = await parser.parseString(xml);
+  const sanitizedXml = sanitizeXml(xml);
+  const feed = await parser.parseString(sanitizedXml);
 
   return (feed.items || []).map((item) => {
     const title = item.title ?? "";
