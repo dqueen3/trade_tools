@@ -158,12 +158,12 @@ const runFetch = async (): Promise<void> => {
 };
 
 const startCron = (): void => {
-  cron.schedule("*/10 * * * *", () => {
+  cron.schedule("* * * * *", () => {
     runFetch().catch((error) => {
       console.error("Failed to fetch RSS:", error);
     });
   });
-  console.log("Cron scheduled: every 10 minutes.");
+  console.log("Cron scheduled: every minute.");
 };
 
 runFetch().catch((error) => {
