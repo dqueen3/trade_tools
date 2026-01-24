@@ -1,2 +1,4 @@
 *.log
 local
+node_modules
+dist
