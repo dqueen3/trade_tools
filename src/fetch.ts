@@ -4,7 +4,12 @@ import crypto from "crypto";
 import { execSync } from "child_process";
 import { evaluateText } from "./filter";
 import { passesGptFilter } from "./gptFilter";
-import { appendRecord, readAllRecords, StoredRecord } from "./storage";
+import {
+  appendRecord,
+  readAllRecords,
+  cleanupOldRejectedRecords,
+  StoredRecord,
+} from "./storage";
 import { generateReport } from "./report";
 
 const RSS_URLS = ["https://prtimes.jp/index.rdf"];
@@ -13,7 +18,16 @@ const CURL_USER_AGENT =
 
 const parser = new Parser();
 
-type FetchedRecord = StoredRecord & { matched: boolean };
+type FetchedItem = {
+  id: string;
+  title: string;
+  summary: string;
+  publishedAt: string;
+  source: "PRTimes";
+  matchedKeywords: string[];
+  link: string;
+  matched: boolean;
+};
 
 const sanitizeXml = (xml: string): string => {
   return xml.replace(/&(?![a-zA-Z]+;|#\d+;)/g, "&amp;");
@@ -43,7 +57,7 @@ const createId = (title: string, link: string): string => {
     .digest("hex");
 };
 
-const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
+const fetchFeed = async (url: string): Promise<FetchedItem[]> => {
   const xml = await fetchXml(url);
   ensureXmlLooksLikeFeed(xml, url);
   const sanitizedXml = sanitizeXml(xml);
@@ -64,7 +78,7 @@ const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
       title,
       summary: description,
       publishedAt: pubDate,
-      source: "PRTimes",
+      source: "PRTimes" as const,
       matchedKeywords: filterResult.matchedKeywords,
       link,
       matched: filterResult.matched,
@@ -77,6 +91,13 @@ const runFetch = async (): Promise<void> => {
   const failures: string[] = [];
   const existingRecords = await readAllRecords();
   const existingIds = new Set(existingRecords.map((record) => record.id));
+
+  // 古い拒否レコードを削除
+  const removedCount = await cleanupOldRejectedRecords();
+  if (removedCount > 0) {
+    console.log(`Cleaned up ${removedCount} old rejected records.`);
+  }
+
   for (const url of RSS_URLS) {
     try {
       const items = await fetchFeed(url);
@@ -84,14 +105,27 @@ const runFetch = async (): Promise<void> => {
         if (!item.matched) {
           continue;
         }
-        const { matched, ...record } = item;
-        if (existingIds.has(record.id)) {
+        if (existingIds.has(item.id)) {
           continue;
         }
-        const gptApproved = await passesGptFilter(record.title, record.summary);
-        if (!gptApproved) {
-          continue;
-        }
+
+        const gptResult = await passesGptFilter(item.id, item.title, item.summary);
+
+        const record: StoredRecord = {
+          id: item.id,
+          title: item.title,
+          summary: item.summary,
+          publishedAt: item.publishedAt,
+          source: item.source,
+          matchedKeywords: item.matchedKeywords,
+          link: item.link,
+          gptCategory: gptResult.category,
+          gptReason: gptResult.reason,
+          gptIsListed: gptResult.isListed,
+          gptPassed: gptResult.passed,
+          gptCalledAt: gptResult.calledAt,
+        };
+
         await appendRecord(record);
         existingIds.add(record.id);
         appended.push(record);
@@ -102,10 +136,18 @@ const runFetch = async (): Promise<void> => {
     }
   }
 
-  await generateReport([...existingRecords, ...appended]);
+  // レポートはgptPassedがtrueのもののみ
+  const allRecords = [...existingRecords, ...appended];
+  const passedRecords = allRecords.filter((r) => r.gptPassed);
+  await generateReport(passedRecords);
+
+  const passedCount = appended.filter((r) => r.gptPassed).length;
+  const rejectedCount = appended.filter((r) => !r.gptPassed).length;
 
   if (appended.length > 0) {
-    console.log(`Appended ${appended.length} records.`);
+    console.log(
+      `Appended ${appended.length} records (passed: ${passedCount}, rejected: ${rejectedCount}).`,
+    );
   } else {
     console.log("No matching records found.");
   }

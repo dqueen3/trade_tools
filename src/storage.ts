@@ -9,6 +9,11 @@ export type StoredRecord = {
   source: "PRTimes";
   matchedKeywords: string[];
   link: string;
+  gptCategory: "A" | "B" | "C" | "D";
+  gptReason: string;
+  gptIsListed: boolean;
+  gptPassed: boolean;
+  gptCalledAt: string;
 };
 
 const DATA_DIR = path.resolve(__dirname, "..", "data");
@@ -37,6 +42,30 @@ export const readAllRecords = async (): Promise<StoredRecord[]> => {
     }
     throw error;
   }
+};
+
+const RETENTION_DAYS = 30;
+
+export const cleanupOldRejectedRecords = async (): Promise<number> => {
+  const records = await readAllRecords();
+  const now = Date.now();
+  const retentionMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+  const filtered = records.filter((record) => {
+    if (record.gptPassed) {
+      return true;
+    }
+    const calledAt = new Date(record.gptCalledAt).getTime();
+    return now - calledAt < retentionMs;
+  });
+
+  const removedCount = records.length - filtered.length;
+  if (removedCount > 0) {
+    const content = filtered.map((r) => JSON.stringify(r)).join("\n") + "\n";
+    await fs.writeFile(JSONL_PATH, content, "utf8");
+  }
+
+  return removedCount;
 };
 
 export { JSONL_PATH };
