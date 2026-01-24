@@ -5,5 +5,3 @@ dist
 data
 reports
 package-lock.json
-config/include.txt
-config/exclude.txt
