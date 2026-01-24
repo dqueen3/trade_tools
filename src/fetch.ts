@@ -8,12 +8,19 @@ import { generateReport } from "./report";
 
 const RSS_URLS = ["https://prtimes.jp/main/html/rd/p/rss.xml"];
 
-const parser = new Parser();
+const parser = new Parser({
+  xml2js: {
+    strict: false,
+    normalize: true,
+    normalizeTags: true,
+  },
+});
 
 type FetchedRecord = StoredRecord & { matched: boolean };
 
 const sanitizeXml = (xml: string): string => {
-  return xml.replace(
+  const cleaned = xml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  return cleaned.replace(
     /&(?![a-zA-Z]+;|#[0-9]+;|#x[a-fA-F0-9]+;)/g,
     "&amp;"
   );
