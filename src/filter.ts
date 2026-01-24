@@ -1,7 +1,20 @@
+import fs from "fs";
+import path from "path";
+
+const loadList = (filePath: string): string[] => {
+  return fs
+    .readFileSync(filePath, "utf-8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+};
+
+const configDir = path.resolve(process.cwd(), "config");
+
 export const rules = {
-  include: ["生成AI", "LLM", "自動化", "DX"],
-  exclude: ["キャンペーン", "無料", "セミナー"],
-} as const;
+  include: loadList(path.join(configDir, "include.txt")),
+  exclude: loadList(path.join(configDir, "exclude.txt")),
+};
 
 export type FilterResult = {
   matched: boolean;
