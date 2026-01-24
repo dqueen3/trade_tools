@@ -1,3 +1,4 @@
+import axios from "axios";
 import Parser from "rss-parser";
 import cron from "node-cron";
 import crypto from "crypto";
@@ -5,7 +6,7 @@ import { evaluateText } from "./filter";
 import { appendRecord, readAllRecords, StoredRecord } from "./storage";
 import { generateReport } from "./report";
 
-const RSS_URLS = ["https://prtimes.jp/main/html/rd/rss/p/0.xml"];
+const RSS_URLS = ["https://prtimes.jp/rss"];
 
 const parser = new Parser();
 
@@ -19,7 +20,13 @@ const createId = (title: string, link: string): string => {
 };
 
 const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
-  const feed = await parser.parseURL(url);
+  const res = await axios.get(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+    },
+    maxRedirects: 5,
+  });
+  const feed = await parser.parseString(res.data);
 
   return (feed.items || []).map((item) => {
     const title = item.title ?? "";
