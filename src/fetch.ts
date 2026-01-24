@@ -1,4 +1,4 @@
-import axios from "axios";
+import { execSync } from "child_process";
 import Parser from "rss-parser";
 import cron from "node-cron";
 import crypto from "crypto";
@@ -20,13 +20,11 @@ const createId = (title: string, link: string): string => {
 };
 
 const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
-  const res = await axios.get(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-    },
-    maxRedirects: 5,
-  });
-  const feed = await parser.parseString(res.data);
+  const xml = execSync(
+    `curl -L -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" "${url}"`,
+    { encoding: "utf-8" }
+  );
+  const feed = await parser.parseString(xml);
 
   return (feed.items || []).map((item) => {
     const title = item.title ?? "";
