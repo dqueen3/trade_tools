@@ -100,15 +100,21 @@ const fetchFeed = async (url: string): Promise<FetchedRecord[]> => {
 
 const runFetch = async (): Promise<void> => {
   const appended: StoredRecord[] = [];
+  const failures: string[] = [];
   for (const url of RSS_URLS) {
-    const items = await fetchFeed(url);
-    for (const item of items) {
-      if (!item.matched) {
-        continue;
+    try {
+      const items = await fetchFeed(url);
+      for (const item of items) {
+        if (!item.matched) {
+          continue;
+        }
+        const { matched, ...record } = item;
+        await appendRecord(record);
+        appended.push(record);
       }
-      const { matched, ...record } = item;
-      await appendRecord(record);
-      appended.push(record);
+    } catch (error) {
+      failures.push(url);
+      console.error(`Failed to fetch feed: ${url}`, error);
     }
   }
 
@@ -119,6 +125,10 @@ const runFetch = async (): Promise<void> => {
     console.log(`Appended ${appended.length} records.`);
   } else {
     console.log("No matching records found.");
+  }
+
+  if (failures.length === RSS_URLS.length) {
+    console.warn("All feed URLs failed to load.");
   }
 };
 
