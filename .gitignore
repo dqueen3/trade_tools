@@ -2,3 +2,6 @@
 local
 node_modules
 dist
+data
+reports
+package-lock.json
